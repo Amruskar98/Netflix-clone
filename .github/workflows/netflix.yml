@@ -36,7 +36,20 @@ jobs:
           docker build --build-arg TMDB_V3_API_KEY=cef2fb52dc7c1970262dc5ec2cbea519 -t netflix .
           docker tag netflix ramparsh/netflix:v2
           # docker login
-          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
           docker push ramparsh/netflix:v2
         env:
           DOCKER_CLI_ACI: 1
+
+  deploy:
+    needs: build-analyze-scan
+    runs-on: [Github_action-Netflix]
+    steps:
+      - name: Pull the docker image
+        run: docker pull ramparsh/netflix:v2
+
+      - name: Trivy image scan
+        run: trivy image ramparsh/netflix:v2
+
+      - name: Run the container netflix
+        run: docker run -d --name netflix -p 8081:80 ramparsh/netflix:v2
